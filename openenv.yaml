@@ -1,0 +1,7 @@
+name: sql-analyst-env
+version: "1.0.0"
+description: "An OpenEnv environment where agents write SQL to answer business questions"
+action_space: {type: text, description: SQL query string}
+observation_space: {schema_info: str, question: str, last_query_result: str}
+tasks: [easy_sql, medium_sql, hard_sql]
+tags: [sql, data-analysis, real-world]
