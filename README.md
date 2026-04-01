@@ -1,3 +1,13 @@
+---
+title: SQL Analyst
+emoji: 📊
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_file: server/app.py
+pinned: false
+---
+
 # SQL Analyst Agent Environment
 
 ## Description
