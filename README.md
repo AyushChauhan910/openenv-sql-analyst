@@ -35,12 +35,12 @@ Format: Valid SQL SELECT statement targeting the provided schema
 | medium_sql | Medium | Multi-table JOIN with ranking | 8 |
 | hard_sql | Hard | CTE + window function analysis | 10 |
 
-## Baseline Scores (GPT-5 Nano)
+## Baseline Scores (Llama-3.1-8B-Instruct)
 | Task | Score |
 |------|-------|
-| easy_sql | [fill after testing] |
-| medium_sql | [fill after testing] |
-| hard_sql | [fill after testing] |
+| easy_sql | 0.59 |
+| medium_sql | 0.59 |
+| hard_sql | 0.00 |
 
 ## Setup
 docker build -t sql-analyst-env .
