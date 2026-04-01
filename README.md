@@ -37,9 +37,9 @@ Format: Valid SQL SELECT statement targeting the provided schema
 ## Baseline Scores (Llama-3.1-8B-Instruct)
 | Task | Score |
 |------|-------|
-| easy_sql | 0.59 |
-| medium_sql | 0.59 |
-| hard_sql | 0.00 |
+| easy_sql | 1.000 |
+| medium_sql | 0.000 |
+| hard_sql | 0.000 |
 
 ## Setup
 docker build -t sql-analyst-env .
