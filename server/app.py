@@ -36,6 +36,11 @@ class StepRequest(BaseModel):
     sql_query: str
 
 
+@app.get("/")
+async def root():
+    return {"message": "SQL Analyst Agent Environment", "status": "running"}
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
