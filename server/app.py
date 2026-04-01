@@ -47,10 +47,12 @@ async def health():
 
 
 @app.post("/reset")
-async def reset(request: ResetRequest):
+async def reset(request: Optional[ResetRequest] = None):
     global current_task, current_connection, step_count, episode_history, schema_info, episode_done
 
-    task_name = request.task_name
+    task_name = None
+    if request is not None:
+        task_name = request.task_name
     if task_name is None:
         task_name = rng.choice(list(TASK_REGISTRY.keys()))
 
