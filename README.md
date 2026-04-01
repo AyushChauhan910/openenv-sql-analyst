@@ -14,7 +14,7 @@ An OpenEnv-compliant environment where AI agents are evaluated on their ability 
 write SQL queries to answer real business questions against a synthetic e-commerce database.
 
 ## Motivation
-[2 sentences on why SQL querying is a real-world bottleneck]
+SQL querying often becomes a real-world bottleneck because poorly optimized queries (e.g., missing indexes, inefficient joins, or full table scans) can drastically increase execution time as data scales. Additionally, high concurrency in production systems leads to contention for database resources (CPU, memory, locks), further degrading performance and slowing down overall application responsiveness.
 
 ## Action Space
 Type: Text (SQL query string)
