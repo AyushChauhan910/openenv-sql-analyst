@@ -1,7 +1,25 @@
 name: sql-analyst-env
 version: "1.0.0"
-description: "An OpenEnv environment where agents write SQL to answer business questions"
-action_space: {type: text, description: SQL query string}
-observation_space: {schema_info: str, question: str, last_query_result: str}
-tasks: [easy_sql, medium_sql, hard_sql]
-tags: [sql, data-analysis, real-world]
+description: "OpenEnv environment for evaluating SQL query generation agents"
+action_space:
+  type: text
+  description: "A valid SQL SELECT query"
+observation_space:
+  schema_info: "Database schema description"
+  question: "Natural language business question"
+  last_query_result: "Result of previous query or null"
+tasks:
+  - name: easy_sql
+    difficulty: easy
+    description: "Single-table aggregation query"
+  - name: medium_sql
+    difficulty: medium
+    description: "Multi-table JOIN with ranking"
+  - name: hard_sql
+    difficulty: hard
+    description: "CTE + window function analysis"
+tags:
+  - sql
+  - data-analysis
+  - real-world
+  - openenv
