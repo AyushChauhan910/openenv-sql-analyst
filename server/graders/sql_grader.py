@@ -3,6 +3,10 @@ from server.models import Reward
 
 
 class SQLGrader:
+    def _clamp(self, score: float) -> float:
+        """Scores must be strictly (0, 1) — not 0.0, not 1.0"""
+        return max(0.001, min(0.999, score))
+
     def grade(
         self,
         sql_query: str,
@@ -16,12 +20,12 @@ class SQLGrader:
             error_msg = str(e)
             if "syntax" in error_msg.lower():
                 return Reward(
-                    score=0.0,
+                    score=self._clamp(0.0),
                     feedback=f"SQL syntax error: {error_msg}",
                     partial_credit={}
                 )
             return Reward(
-                score=0.1,
+                score=self._clamp(0.1),
                 feedback=f"Query failed: {error_msg}",
                 partial_credit={}
             )
@@ -30,7 +34,7 @@ class SQLGrader:
 
         if not actual:
             return Reward(
-                score=0.2,
+                score=self._clamp(0.2),
                 feedback="Query returned no rows",
                 partial_credit={}
             )
@@ -53,7 +57,7 @@ class SQLGrader:
 
         if expected_set == actual_set:
             return Reward(
-                score=1.0,
+                score=self._clamp(1.0),
                 feedback="Perfect answer!",
                 partial_credit=partial_credit
             )
@@ -65,20 +69,20 @@ class SQLGrader:
 
         if value_match_ratio >= 0.8:
             return Reward(
-                score=0.8,
+                score=self._clamp(0.8),
                 feedback="Close but some values differ",
                 partial_credit=partial_credit
             )
         elif value_match_ratio >= 0.5:
             return Reward(
-                score=0.6,
+                score=self._clamp(0.6),
                 feedback="Partially correct but many values differ",
                 partial_credit=partial_credit
             )
         else:
             score = 0.3 + column_score + row_count_score
             return Reward(
-                score=round(min(score, 0.59), 2),
+                score=self._clamp(round(min(score, 0.59), 2)),
                 feedback="Query returned results but values do not match expected",
                 partial_credit=partial_credit
             )

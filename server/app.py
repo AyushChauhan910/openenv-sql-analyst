@@ -94,6 +94,7 @@ async def step(request: StepRequest):
         connection=current_connection
     )
 
+    reward_score = max(0.001, min(0.999, float(reward.score)))
     done = reward.score >= 1.0 or step_count >= current_task.get_max_steps()
     episode_done = done
 
@@ -102,7 +103,7 @@ async def step(request: StepRequest):
     episode_history.append({
         "step": step_count,
         "sql_query": request.sql_query,
-        "score": reward.score,
+        "score": reward_score,
         "feedback": reward.feedback
     })
 
@@ -111,14 +112,14 @@ async def step(request: StepRequest):
         question=current_task.get_question(),
         db_state="query_executed",
         last_query_result=last_query_result,
-        last_reward=reward.score,
+        last_reward=reward_score,
         step=step_count,
         done=done
     )
 
     return {
         "observation": observation.model_dump(),
-        "reward": reward.score,
+        "reward": reward_score,
         "done": done,
         "info": {
             "feedback": reward.feedback,
