@@ -3,20 +3,22 @@ inference.py — SQL Analyst Agent Environment
 """
 import sys
 import subprocess
+import os
 
-try:
-    from openai import OpenAI
-except ModuleNotFoundError:
-    subprocess.check_call([
-        sys.executable, "-m", "pip", "install", "openai>=1.0.0", "--quiet"
-    ])
-    import importlib
-    import site
-    importlib.invalidate_caches()
-    for p in site.getsitepackages():
-        if p not in sys.path:
-            sys.path.insert(0, p)
-    from openai import OpenAI
+# Force-install openai into a local _deps folder and add to path
+_deps_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_deps")
+os.makedirs(_deps_dir, exist_ok=True)
+subprocess.check_call([
+    sys.executable, "-m", "pip", "install",
+    "openai>=1.0.0",
+    "--target", _deps_dir,
+    "--quiet",
+    "--disable-pip-version-check"
+])
+if _deps_dir not in sys.path:
+    sys.path.insert(0, _deps_dir)
+
+from openai import OpenAI
 
 import asyncio
 import os
