@@ -1,6 +1,14 @@
 """
 inference.py — SQL Analyst Agent Environment
 """
+import sys
+import subprocess
+
+try:
+    from openai import OpenAI
+except ModuleNotFoundError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "openai>=1.0.0", "-q"])
+    from openai import OpenAI
 
 import asyncio
 import os
