@@ -7,7 +7,15 @@ import subprocess
 try:
     from openai import OpenAI
 except ModuleNotFoundError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "openai>=1.0.0", "-q"])
+    subprocess.check_call([
+        sys.executable, "-m", "pip", "install", "openai>=1.0.0", "--quiet"
+    ])
+    import importlib
+    import site
+    importlib.invalidate_caches()
+    for p in site.getsitepackages():
+        if p not in sys.path:
+            sys.path.insert(0, p)
     from openai import OpenAI
 
 import asyncio
