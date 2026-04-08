@@ -5,7 +5,9 @@ inference.py — SQL Analyst Agent Environment
 import asyncio
 import os
 import textwrap
-import requests
+import urllib.request
+import urllib.error
+import json
 from typing import List, Optional
 from openai import OpenAI
 
@@ -59,23 +61,27 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
 # ── Environment calls ────────────────────────────────────────────────────────
 
 def env_reset(task_name: str) -> dict:
-    r = requests.post(
+    data = json.dumps({"task_name": task_name}).encode("utf-8")
+    req = urllib.request.Request(
         f"{PING_URL}/reset",
-        json={"task_name": task_name},
-        timeout=30,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
     )
-    r.raise_for_status()
-    return r.json()
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
 
 
 def env_step(sql_query: str) -> dict:
-    r = requests.post(
+    data = json.dumps({"sql_query": sql_query}).encode("utf-8")
+    req = urllib.request.Request(
         f"{PING_URL}/step",
-        json={"sql_query": sql_query},
-        timeout=30,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
     )
-    r.raise_for_status()
-    return r.json()
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        return json.loads(resp.read().decode("utf-8"))
 
 
 # ── Prompt builder ───────────────────────────────────────────────────────────
