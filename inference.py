@@ -1,5 +1,6 @@
 """
 inference.py — SQL Analyst Agent Environment
+Zero external dependencies (stdlib only)
 """
 
 import asyncio
@@ -9,8 +10,8 @@ import urllib.request
 import urllib.error
 import json
 from typing import List, Optional
-from openai import OpenAI
 
+# ── Config ───────────────────────────────────────────────────────────────────
 API_KEY = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
 MODEL_NAME = os.getenv("MODEL_NAME") or "gpt-5-nano"
@@ -31,7 +32,7 @@ SYSTEM_PROMPT = textwrap.dedent("""
 """).strip()
 
 
-# ── Logging (mandatory format) ──────────────────────────────────────────────
+# ── Logging (mandatory format) ───────────────────────────────────────────────
 
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
@@ -40,7 +41,6 @@ def log_start(task: str, env: str, model: str) -> None:
 def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
     error_val = error if error else "null"
     done_val = str(done).lower()
-    # Truncate action to avoid newlines breaking the format
     action_clean = action.replace("\n", " ").strip()
     print(
         f"[STEP] step={step} action={action_clean} reward={reward:.2f} "
@@ -58,38 +58,25 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     )
 
 
-# ── Environment calls ────────────────────────────────────────────────────────
+# ── HTTP helpers (zero dependencies) ─────────────────────────────────────────
 
-def env_reset(task_name: str) -> dict:
-    data = json.dumps({"task_name": task_name}).encode("utf-8")
-    req = urllib.request.Request(
-        f"{PING_URL}/reset",
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+def http_post(url: str, payload: dict, token: Optional[str] = None) -> dict:
+    data = json.dumps(payload).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=60) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def env_step(sql_query: str) -> dict:
-    data = json.dumps({"sql_query": sql_query}).encode("utf-8")
-    req = urllib.request.Request(
-        f"{PING_URL}/step",
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+# ── LLM call (pure urllib) ────────────────────────────────────────────────────
 
-
-# ── Prompt builder ───────────────────────────────────────────────────────────
-
-def build_user_prompt(obs: dict, step: int, history: List[str]) -> str:
+def get_sql_from_model(obs: dict, step: int, history: List[str]) -> str:
     history_block = "\n".join(history[-4:]) if history else "None"
     last_result = obs.get("last_query_result") or "None"
-    return textwrap.dedent(f"""
+
+    user_prompt = textwrap.dedent(f"""
         Step: {step}
         Schema:
         {obs.get("schema_info", "")}
@@ -104,23 +91,20 @@ def build_user_prompt(obs: dict, step: int, history: List[str]) -> str:
         Write the SQL query to answer the question.
     """).strip()
 
+    payload = {
+        "model": MODEL_NAME,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": TEMPERATURE,
+        "max_tokens": MAX_TOKENS,
+        "stream": False,
+    }
 
-# ── Model call ───────────────────────────────────────────────────────────────
-
-def get_sql_from_model(client: OpenAI, obs: dict, step: int, history: List[str]) -> str:
-    user_prompt = build_user_prompt(obs, step, history)
     try:
-        completion = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=TEMPERATURE,
-            max_tokens=MAX_TOKENS,
-            stream=False,
-        )
-        text = (completion.choices[0].message.content or "").strip()
+        result = http_post(f"{API_BASE_URL}/chat/completions", payload, token=API_KEY)
+        text = result["choices"][0]["message"]["content"].strip()
         # Strip markdown backticks if model adds them
         if text.startswith("```"):
             text = text.split("```")[1]
@@ -132,9 +116,19 @@ def get_sql_from_model(client: OpenAI, obs: dict, step: int, history: List[str])
         return "SELECT 1"
 
 
-# ── Main ─────────────────────────────────────────────────────────────────────
+# ── Environment calls ─────────────────────────────────────────────────────────
 
-async def run_task(client: OpenAI, task_name: str) -> float:
+def env_reset(task_name: str) -> dict:
+    return http_post(f"{PING_URL}/reset", {"task_name": task_name})
+
+
+def env_step(sql_query: str) -> dict:
+    return http_post(f"{PING_URL}/step", {"sql_query": sql_query})
+
+
+# ── Task runner ───────────────────────────────────────────────────────────────
+
+async def run_task(task_name: str) -> float:
     history: List[str] = []
     rewards: List[float] = []
     steps_taken = 0
@@ -150,7 +144,7 @@ async def run_task(client: OpenAI, task_name: str) -> float:
             if obs.get("done"):
                 break
 
-            sql = get_sql_from_model(client, obs, step, history)
+            sql = get_sql_from_model(obs, step, history)
             result = env_step(sql)
 
             reward = float(result.get("reward", 0.0))
@@ -180,8 +174,6 @@ async def run_task(client: OpenAI, task_name: str) -> float:
 
 
 async def main() -> None:
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-
     print(f"\n{'='*50}", flush=True)
     print(f"SQL Analyst Agent — Baseline Run", flush=True)
     print(f"Model: {MODEL_NAME}", flush=True)
@@ -191,7 +183,7 @@ async def main() -> None:
     results = {}
     for task in TASKS:
         print(f"\n--- Running {task} ---", flush=True)
-        score = await run_task(client, task)
+        score = await run_task(task)
         results[task] = score
 
     print(f"\n{'='*50}", flush=True)
